@@ -1,0 +1,55 @@
+id: com.zachtronics.TheZachtronicsSolitaireCollection
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+command: gog-wrapper
+rename-desktop-file: gog-game.desktop
+rename-icon: gog-game
+
+finish-args:
+  - --share=ipc
+  #- --socket=wayland
+  - --socket=x11
+  - --device=dri
+  - --socket=pulseaudio
+
+modules:
+  - name: gog-game
+    buildsystem: simple
+    build-commands:
+      - chmod +x gogextract.py
+      - ./gogextract.py ./the_zachtronics_solitaire_collection_march_2023_update_63924.sh
+      - unzip ./data.zip -d "${FLATPAK_DEST}/gog"
+      - cd "${FLATPAK_DEST}/gog/data/noarch/game/" && chmod +x *
+      - install -D -t "${FLATPAK_DEST}/bin" gog-wrapper
+      - |
+        ICON_IN='/app/gog/data/noarch/support/icon.png'
+        for s in 16 24 32 48 64 128 256 ; do
+          SIZE="${s}x${s}"
+          ffmpeg -y -i "${ICON_IN}" -s "${SIZE}" "gog-game.png"
+          install -p -Dm644 "gog-game.png" -t "${FLATPAK_DEST}/share/icons/hicolor/${SIZE}/apps/"
+        done
+      - desktop-file-edit --set-key 'Name' --set-value "$(cat /app/gog/data/noarch/gameinfo | head -n 1)" gog-game.desktop
+      - install -p -Dm644 'gog-game.desktop' -t "${FLATPAK_DEST}/share/applications/"
+    sources:
+      - type: file
+        path: the_zachtronics_solitaire_collection_march_2023_update_63924.sh 
+      - type: file
+        url: https://github.com/Yepoleb/gogextract/raw/master/gogextract.py
+        sha256: 8513ab8c2c24abcc97dd04cbd215554b4dfba5e4c56279d4ddb982750bb640b9
+      - type: script
+        dest-filename: gog-game.desktop
+        commands:
+         - |
+           [Desktop Entry]
+           Name=GogGame
+           Icon=gog-game
+           Exec=gog-wrapper
+           Terminal=false
+           Type=Application
+           Categories=Game;
+      - type: script
+        dest-filename: gog-wrapper
+        commands:
+         - |
+           /app/gog/data/noarch/start.sh
